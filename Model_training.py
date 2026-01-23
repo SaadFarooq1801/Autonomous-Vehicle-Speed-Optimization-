@@ -12,7 +12,7 @@ import pickle
 
 img_size = 32  
 batch_size = 32
-epochs = 20
+epochs = 20  #Number of times the model sees the dataset
 learning_rate = 0.001
 
 def load_data(data_path):
@@ -20,7 +20,6 @@ def load_data(data_path):
     labels = []
     classes = os.listdir(data_path)
     num_classes = len(classes)
-    
     print(f"Found {num_classes} classes")
     
     for class_num, class_folder in enumerate(classes):
@@ -43,12 +42,10 @@ def load_data(data_path):
     
     images = np.array(images)
     labels = np.array(labels)
-    
     return images, labels, num_classes
 
 X_train, y_train, num_classes = load_data('dataset/Train')
 X_test, y_test, _ = load_data('dataset/Test')
-
 print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
 
 def preprocess_images(images):
@@ -76,21 +73,16 @@ datagen.fit(X_train)
 
 def create_model():
     model = Sequential()
-    
     model.add(Conv2D(32, (5, 5), activation='relu', input_shape=(img_size, img_size, 3)))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    
     model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    
     model.add(Conv2D(128, (3, 3), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    
     model.add(Flatten())
     model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax'))
-    
+    model.add(Dense(num_classes, activation='softmax')) 
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss='categorical_crossentropy',
@@ -101,7 +93,6 @@ def create_model():
 
 model = create_model()
 model.summary()
-
 history = model.fit(
     datagen.flow(X_train, y_train, batch_size=batch_size),
     epochs=epochs,
@@ -109,14 +100,9 @@ history = model.fit(
     steps_per_epoch=len(X_train) // batch_size,
     verbose=1
 )
-
-
 model.save('model_trained.h5')
 print("Model saved successfully!")
-
 plt.figure(figsize=(12, 4))
-
-
 plt.subplot(1, 2, 1)
 plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
@@ -125,7 +111,6 @@ plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.grid(True)
-
 plt.subplot(1, 2, 2)
 plt.plot(history.history['loss'], label='Training Loss')
 plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -134,11 +119,9 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
 plt.grid(True)
-
 plt.tight_layout()
 plt.savefig('training_history.png')
 plt.show()
-
 
 test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
 print(f"\nTest Accuracy: {test_accuracy*100:.2f}%")
@@ -155,7 +138,7 @@ def predict_speed_sign(image_path, model, class_names):
     img = cv2.imread(image_path)
     img = cv2.resize(img, (img_size, img_size))
     img = img / 255.0
-    img = np.expand_dims(img, axis=0)  # Add batch dimension
+    img = np.expand_dims(img, axis=0)  #batch dimension
     
     predictions = model.predict(img)
     predicted_class = np.argmax(predictions)
