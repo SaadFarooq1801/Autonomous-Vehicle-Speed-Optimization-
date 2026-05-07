@@ -2,18 +2,22 @@ import numpy as np
 import cv2
 import os
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.models import Sequential 
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout   
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Dropout, GlobalAveragePooling2D, Input
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import matplotlib.pyplot as plt
 import pickle
 
-img_size = 32  
+img_size = 96  # MobileNetV2 performs better at 96x96+; 32x32 is too small for pretrained features
 batch_size = 32
 epochs = 20  #Number of times the model sees the dataset
-learning_rate = 0.001
+learning_rate = 0.0001  # Lower LR for fine-tuning a pretrained model
+
+DATA_DIR = "/Users/saadfarooq/dataset"  # root folder containing Train/ and Test/ subfolders
 
 def load_data(data_path):
     images = []
@@ -44,8 +48,8 @@ def load_data(data_path):
     labels = np.array(labels)
     return images, labels, num_classes
 
-X_train, y_train, num_classes = load_data('dataset/Train')
-X_test, y_test, _ = load_data('dataset/Test')
+X_train, y_train, num_classes = load_data(os.path.join(DATA_DIR, 'Train'))
+X_test, y_test, _ = load_data(os.path.join(DATA_DIR, 'Test'))
 print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
 
 def preprocess_images(images):
@@ -72,24 +76,38 @@ datagen = ImageDataGenerator(
 datagen.fit(X_train)
 
 def create_model():
-    model = Sequential()
-    model.add(Conv2D(32, (5, 5), activation='relu', input_shape=(img_size, img_size, 3)))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(128, (3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes, activation='softmax')) 
+    base_model = MobileNetV2(
+        input_shape=(img_size, img_size, 3),
+        include_top=False,
+        weights='imagenet'
+    )
+
+    # Freeze all base layers first, then unfreeze the top 30 for fine-tuning.
+    # Fully frozen features don't transfer well to Arabic traffic signs.
+    base_model.trainable = True
+    for layer in base_model.layers[:-30]:
+        layer.trainable = False
+
+    inputs = Input(shape=(img_size, img_size, 3))
+    x = base_model(inputs, training=False)  # training=False keeps BN layers frozen
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(256, activation='relu')(x)
+    x = Dropout(0.5)(x)
+    outputs = Dense(num_classes, activation='softmax')(x)
+
+    model = Model(inputs, outputs)
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss='categorical_crossentropy',
         metrics=['accuracy']
     )
-    
+
     return model
+
+callbacks = [
+    EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True, verbose=1),
+    ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True, verbose=1),
+]
 
 model = create_model()
 model.summary()
@@ -98,6 +116,7 @@ history = model.fit(
     epochs=epochs,
     validation_data=(X_test, y_test),
     steps_per_epoch=len(X_train) // batch_size,
+    callbacks=callbacks,
     verbose=1
 )
 model.save('model_trained.h5')
@@ -149,5 +168,5 @@ def predict_speed_sign(image_path, model, class_names):
     
     return class_names[predicted_class], confidence
 
-class_names = sorted(os.listdir('dataset/Train'))
+class_names = sorted(os.listdir(os.path.join(DATA_DIR, 'Train')))
 predicted_speed, confidence = predict_speed_sign('test_image.jpg', model, class_names)
