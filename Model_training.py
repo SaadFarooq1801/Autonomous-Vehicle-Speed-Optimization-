@@ -1,3 +1,9 @@
+# TensorFlow version — GPU requires WSL2 on Windows (TF >= 2.11 dropped native Windows CUDA).
+# To run with GPU: set up WSL2, install Ubuntu, then inside WSL2:
+#   pip install tensorflow[and-cuda] numpy opencv-python scikit-learn matplotlib
+#   python3 Model_training.py
+# For a native Windows GPU version, use Model_training_pytorch.py instead.
+
 import numpy as np
 import cv2
 import os
@@ -17,7 +23,7 @@ batch_size = 32
 epochs = 20  #Number of times the model sees the dataset
 learning_rate = 0.0001  # Lower LR for fine-tuning a pretrained model
 
-DATA_DIR = "/Users/saadfarooq/dataset"  # root folder containing Train/ and Test/ subfolders
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
 
 def load_data(data_path):
     images = []
@@ -35,9 +41,13 @@ def load_data(data_path):
         print(f"Loading class {class_folder}: {len(image_files)} images")
         
         for image_file in image_files:
+            if image_file.startswith('._') or not image_file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                continue
             try:
                 image_path = os.path.join(folder_path, image_file)
                 img = cv2.imread(image_path)
+                if img is None:
+                    continue
                 img = cv2.resize(img, (img_size, img_size))
                 images.append(img)
                 labels.append(class_num)
