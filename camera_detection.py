@@ -50,7 +50,7 @@ def predict(rgb_crop):
 def draw_ui(frame, probs, preview_rgb):
     h, w = frame.shape[:2]
 
-    # ── ROI box ───────────────────────────────────────────────────────────────
+    # ROI box 
     roi_size = min(h, w) // 2
     cx, cy   = w // 2, h // 2
     x1 = cx - roi_size // 2
@@ -67,7 +67,7 @@ def draw_ui(frame, probs, preview_rgb):
     cv2.putText(frame, "Fill box with sign", (x1, y1 - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.55, roi_color, 1)
 
-    # ── Main prediction label ─────────────────────────────────────────────────
+    # Main prediction label 
     label = f"{class_names[best_idx]} km/h" if confident else "???"
     cv2.putText(frame, label, (18, 65),
                 cv2.FONT_HERSHEY_DUPLEX, 2.2, roi_color, 3)
@@ -77,7 +77,7 @@ def draw_ui(frame, probs, preview_rgb):
         cv2.putText(frame, "LOW CONFIDENCE", (18, 128),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-    # ── Confidence bars ───────────────────────────────────────────────────────
+    # Confidence bars 
     px, py    = w - 230, 20
     bar_max_w = 160
     bar_h     = 16
@@ -106,7 +106,7 @@ def draw_ui(frame, probs, preview_rgb):
         color = (255, 255, 255) if is_best else (180, 180, 180)
         cv2.putText(frame, text, (px, by - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
 
-    # ── Model preview (what the model actually sees, bottom-left) ─────────────
+    # Model preview (what the model actually sees, bottom-left)
     preview_bgr    = cv2.cvtColor(preview_rgb, cv2.COLOR_RGB2BGR)
     preview_disp   = cv2.resize(preview_bgr, (128, 128), interpolation=cv2.INTER_NEAREST)
     ph, pw         = preview_disp.shape[:2]
@@ -152,7 +152,6 @@ def main():
         prob_buffer.append(probs)
         smooth_probs = np.mean(prob_buffer, axis=0).copy()  # temporal average
 
-        # Arabic ٣ (3) resembles ٨ (8) in some sign fonts — boost '30' so it
         # wins the 30/80 toss-up. Only affects that one pair; all other classes untouched.
         idx_30 = class_names.index('30')
         idx_80 = class_names.index('80')

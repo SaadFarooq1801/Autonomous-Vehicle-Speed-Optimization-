@@ -1,6 +1,6 @@
 # PyTorch version — supports native Windows GPU (CUDA).
 # Install PyTorch with CUDA before running:
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
 import os
 import numpy as np
@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 
 IMG_SIZE = 96
 BATCH_SIZE = 32
-LR_HEAD = 0.001     # phase 1 — head only
-LR_FINETUNE = 1e-5  # phase 2 — careful fine-tuning of last backbone blocks
-EPOCHS_HEAD = 10    # phase 1 epochs
-EPOCHS_FINETUNE = 15  # phase 2 epochs max
+LR_HEAD = 0.001     # phase 1 
+LR_FINETUNE = 1e-5  # phase 2 
+EPOCHS_HEAD = 10    # phase 1 
+EPOCHS_FINETUNE = 15  # phase 2 
 PATIENCE = 5
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
